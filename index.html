@@ -325,7 +325,26 @@
     }
     return flat * mult;
   }
-  function fmt(n) { return Math.floor(n).toLocaleString("ja-JP"); }
+  // 大きな数は日本語の単位で省略（万・億・兆・京…）。桁があふれても読みやすく。
+  const JP_UNITS = [
+    [1e68, "無量大数"], [1e64, "不可思議"], [1e60, "那由他"], [1e56, "阿僧祇"],
+    [1e52, "恒河沙"], [1e48, "極"], [1e44, "載"], [1e40, "正"], [1e36, "澗"],
+    [1e32, "溝"], [1e28, "穣"], [1e24, "秭"], [1e20, "垓"], [1e16, "京"],
+    [1e12, "兆"], [1e8, "億"], [1e4, "万"]
+  ];
+  function fmt(n) {
+    n = Math.floor(n);
+    if (n < 10000) return n.toLocaleString("ja-JP");        // 1万未満はそのまま
+    if (n >= 1e72) return n.toExponential(2).replace("e+", "e"); // さすがに桁が大きすぎる時
+    for (let i = 0; i < JP_UNITS.length; i++) {
+      const v = JP_UNITS[i][0], s = JP_UNITS[i][1];
+      if (n >= v) {
+        const val = n / v;
+        return (val >= 100 ? val.toFixed(0) : val.toFixed(2)) + s;
+      }
+    }
+    return String(n);
+  }
 
   // ===== セリフ / 実績 =====
   const CLICK_LINES = [
