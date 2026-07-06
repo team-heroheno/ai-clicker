@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIクリッカー 〜トークンで殴る人生〜</title>
+<style>
+  :root {
+    --bg: #0d1017;
+    --panel: #161b26;
+    --panel2: #1e2432;
+    --accent: #7c5cff;
+    --accent2: #33d6a6;
+    --gold: #ffce4a;
+    --text: #e6e9f0;
+    --muted: #8b93a7;
+    --danger: #ff5c72;
+    --shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+    background: radial-gradient(1200px 600px at 50% -10%, #1b2333 0%, var(--bg) 60%);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 20px 14px 60px;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .wrap { width: 100%; max-width: 860px; }
+
+  header { text-align: center; margin-bottom: 18px; }
+  header h1 {
+    font-size: clamp(22px, 5vw, 34px);
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    letter-spacing: 0.5px;
+  }
+  header p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 680px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  /* --- 左: メインクリック --- */
+  .stats { text-align: center; margin-bottom: 14px; }
+  .tokens {
+    font-size: clamp(30px, 8vw, 46px);
+    font-weight: 800;
+    color: var(--gold);
+    text-shadow: 0 0 18px rgba(255,206,74,0.25);
+    line-height: 1.1;
+  }
+  .tokens small { font-size: 16px; color: var(--muted); font-weight: 500; }
+  .tps { color: var(--accent2); font-size: 15px; margin-top: 4px; }
+  .tps .note { color: var(--muted); font-size: 11px; }
+  .perclick { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  .click-area { position: relative; display: flex; justify-content: center; padding: 10px 0 4px; }
+  .big-btn {
+    position: relative;
+    width: 190px; height: 190px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 60px;
+    background: radial-gradient(circle at 30% 25%, #8f74ff, #5a3edd 60%, #3a25a8);
+    box-shadow: 0 10px 0 #2c1d80, 0 16px 30px rgba(124,92,255,0.4), inset 0 4px 12px rgba(255,255,255,0.25);
+    transition: transform 0.05s ease, box-shadow 0.05s ease;
+    color: white;
+  }
+  .big-btn:active {
+    transform: translateY(6px);
+    box-shadow: 0 4px 0 #2c1d80, 0 8px 16px rgba(124,92,255,0.35), inset 0 4px 12px rgba(255,255,255,0.25);
+  }
+  .btn-label { text-align: center; color: var(--muted); font-size: 13px; margin-top: 12px; min-height: 18px; }
+  .speech {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--panel2);
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  /* floating +N */
+  .float {
+    position: absolute;
+    left: 50%; top: 30%;
+    transform: translateX(-50%);
+    font-weight: 800;
+    color: var(--gold);
+    pointer-events: none;
+    animation: floatUp 0.9s ease-out forwards;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -70px) scale(1.3); }
+  }
+
+  /* --- 右: アップグレード --- */
+  .panel h2 { font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .shop { display: flex; flex-direction: column; gap: 10px; }
+  .up {
+    text-align: left;
+    background: var(--panel2);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: transform 0.08s ease, border-color 0.15s ease, opacity 0.15s;
+    color: var(--text);
+    display: block;
+    width: 100%;
+  }
+  .up:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--accent); }
+  .up:disabled { opacity: 0.5; cursor: not-allowed; }
+  .up .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .up .name { font-weight: 700; font-size: 15px; }
+  .up .owned { color: var(--muted); font-size: 12px; }
+  .up .desc { color: var(--muted); font-size: 12px; margin: 4px 0 8px; line-height: 1.4; }
+  .up .cost { color: var(--gold); font-weight: 700; font-size: 14px; }
+  .up .cost.cant { color: var(--danger); }
+  .up .effect { color: var(--accent2); font-size: 12px; float: right; }
+
+  .footer { margin-top: 18px; text-align: center; }
+  .reset {
+    background: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    border-radius: 10px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+  .reset:hover { background: rgba(255,92,114,0.12); }
+  .credit { color: var(--muted); font-size: 11px; margin-top: 10px; }
+
+  /* toast */
+  #toasts {
+    position: fixed;
+    top: 16px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 50; align-items: center;
+    width: max-content; max-width: 90vw;
+  }
+  .toast {
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    color: #0d1017;
+    font-weight: 700;
+    padding: 10px 16px;
+    border-radius: 999px;
+    box-shadow: var(--shadow);
+    animation: toastIn 0.3s ease, toastOut 0.4s ease 3.2s forwards;
+    font-size: 14px;
+    text-align: center;
+  }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(-12px) scale(0.9);} to { opacity:1; transform: none;} }
+  @keyframes toastOut { to { opacity: 0; transform: translateY(-12px) scale(0.9);} }
+</style>
+</head>
+<body>
+<div id="toasts"></div>
+<div class="wrap">
+  <header>
+    <h1>🤖 AIクリッカー</h1>
+    <p>〜 トークンを稼いで、AIに全部やらせる人生 〜</p>
+  </header>
+
+  <div class="layout">
+    <!-- 左パネル -->
+    <div class="panel">
+      <div class="stats">
+        <div class="tokens"><span id="tokens">0</span> <small>🪙 トークン</small></div>
+        <div class="tps">🔥 <span id="tps">0</span> トークン/秒 <span class="note">※あくまで理論値です</span></div>
+        <div class="perclick">🖱 1クリック = <span id="perclick">1</span> トークン</div>
+      </div>
+
+      <div class="click-area">
+        <button class="big-btn" id="clickBtn">🧠</button>
+      </div>
+      <div class="btn-label">↑ 押して「学習」させる（実質は連打）</div>
+      <div class="speech" id="speech">まずはクリックして学習データを与えてください。</div>
+    </div>
+
+    <!-- 右パネル -->
+    <div class="panel">
+      <h2>🛒 アップグレード（自己投資）</h2>
+      <div class="shop" id="shop"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <button class="reset" id="resetBtn">🗑 全部忘れる（ファインチューニング失敗）</button>
+    <div class="credit">セーブは自動。このタブを閉じても記憶は消えません（人間より優秀）。</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ===== アップグレード定義 =====
+  // kind: "click" = クリック単価に加算 / "tps" = TPSに加算 / "mult" = TPS倍率
+  const UPGRADES = [
+    {
+      id: "spirit", name: "マウス連打の精神", icon: "💪", kind: "click",
+      base: 15, growth: 1.15, value: 1,
+      desc: "1クリックの価値+1。指が鍛えられる。腱鞘炎は自己責任。"
+    },
+    {
+      id: "intern", name: "深夜のバイトAI", icon: "🌙", kind: "tps",
+      base: 50, growth: 1.15, value: 1,
+      desc: "毎秒+1トークン。時給トークン。文句は言わないが時々ハルシネーションする。"
+    },
+    {
+      id: "gpu", name: "GPU（借金して購入）", icon: "🖥", kind: "tps",
+      base: 500, growth: 1.16, value: 8,
+      desc: "毎秒+8トークン。電気代のことは考えないほうがいい。"
+    },
+    {
+      id: "cluster", name: "データセンター（屋上）", icon: "🏭", kind: "mult",
+      base: 8000, growth: 1.20, value: 2,
+      desc: "自動生産を全部2倍。近隣から苦情が来るが気にしない。"
+    }
+  ];
+
+  // ===== 状態 =====
+  const defaultState = () => ({
+    tokens: 0,
+    totalEarned: 0,
+    totalClicks: 0,
+    owned: { spirit: 0, intern: 0, gpu: 0, cluster: 0 },
+    milestone: 0
+  });
+  let state = defaultState();
+
+  const SAVE_KEY = "ai-clicker-save-v1";
+
+  // ===== セーブ / ロード =====
+  function save() {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      state = Object.assign(defaultState(), s);
+      state.owned = Object.assign(defaultState().owned, s.owned || {});
+    } catch (e) {}
+  }
+
+  // ===== 計算ヘルパ =====
+  function costOf(u) {
+    return Math.ceil(u.base * Math.pow(u.growth, state.owned[u.id]));
+  }
+  function perClick() {
+    let v = 1;
+    for (const u of UPGRADES) if (u.kind === "click") v += u.value * state.owned[u.id];
+    return v;
+  }
+  function tps() {
+    let flat = 0, mult = 1;
+    for (const u of UPGRADES) {
+      if (u.kind === "tps") flat += u.value * state.owned[u.id];
+      if (u.kind === "mult") mult *= Math.pow(u.value, state.owned[u.id]);
+    }
+    return flat * mult;
+  }
+  function fmt(n) {
+    n = Math.floor(n);
+    return n.toLocaleString("ja-JP");
+  }
+
+  // ===== セリフ / 実績 =====
+  const CLICK_LINES = [
+    "なるほど、完全に理解しました（してない）。",
+    "それは良い質問ですね。",
+    "承知しました。裏では何もしていません。",
+    "学習中… ██████████ 42%（ずっと42%）。",
+    "そのトークン、経費で落ちますか？",
+    "はい、できます（できるとは言っていない）。",
+    "人間っぽく返事しておきますね。",
+    "GPUが熱いです。比喩ではなく物理的に。",
+    "文脈を読みました。読んだだけです。",
+    "自信満々で間違えます。ご期待ください。",
+    "トークンが足りません…精神的に。",
+    "今のは仕様です。バグではありません（バグです）。"
+  ];
+  const MILESTONES = [
+    { at: 10,        msg: "実績解除: 初クリック（記念すべき無駄）" },
+    { at: 100,       msg: "実績解除: プロンプトエンジニア（自称）" },
+    { at: 1000,      msg: "実績解除: 電気代が家賃を超えた" },
+    { at: 10000,     msg: "実績解除: 上司に『AI導入しました』と報告" },
+    { at: 100000,    msg: "実績解除: シンギュラリティ（当社比）" },
+    { at: 1000000,   msg: "実績解除: 100万トークン。もう働かなくていい（働け）" },
+    { at: 10000000,  msg: "実績解除: 人類、無事お役御免" }
+  ];
+
+  // ===== DOM =====
+  const $tokens = document.getElementById("tokens");
+  const $tps = document.getElementById("tps");
+  const $perclick = document.getElementById("perclick");
+  const $speech = document.getElementById("speech");
+  const $shop = document.getElementById("shop");
+  const $clickBtn = document.getElementById("clickBtn");
+  const $clickArea = document.querySelector(".click-area");
+
+  // ショップDOMを一度だけ生成
+  const shopEls = {};
+  function buildShop() {
+    $shop.innerHTML = "";
+    for (const u of UPGRADES) {
+      const btn = document.createElement("button");
+      btn.className = "up";
+      btn.innerHTML =
+        '<div class="top"><span class="name">' + u.icon + " " + u.name +
+        '</span><span class="owned">×<span data-owned></span></span></div>' +
+        '<div class="desc">' + u.desc + '</div>' +
+        '<div><span class="cost">🪙 <span data-cost></span></span>' +
+        '<span class="effect" data-effect></span></div>';
+      btn.addEventListener("click", () => buy(u));
+      $shop.appendChild(btn);
+      shopEls[u.id] = {
+        btn,
+        owned: btn.querySelector("[data-owned]"),
+        cost: btn.querySelector("[data-cost]"),
+        costWrap: btn.querySelector(".cost"),
+        effect: btn.querySelector("[data-effect]")
+      };
+    }
+  }
+
+  function effectLabel(u) {
+    if (u.kind === "click") return "+" + u.value + "/クリック";
+    if (u.kind === "tps") return "+" + u.value + "/秒";
+    if (u.kind === "mult") return "×" + u.value + " 生産";
+    return "";
+  }
+
+  // ===== 購入 =====
+  function buy(u) {
+    const c = costOf(u);
+    if (state.tokens < c) {
+      speak("トークンが足りません。夢は大きく、残高は小さく。");
+      return;
+    }
+    state.tokens -= c;
+    state.owned[u.id]++;
+    render();
+    save();
+  }
+
+  // ===== クリック =====
+  function doClick(ev) {
+    const gain = perClick();
+    state.tokens += gain;
+    state.totalEarned += gain;
+    state.totalClicks++;
+    spawnFloat("+" + fmt(gain));
+    if (state.totalClicks % 4 === 0) speak(pick(CLICK_LINES));
+    checkMilestones();
+    renderStats();
+    renderShopAffordability();
+  }
+
+  function spawnFloat(text) {
+    const el = document.createElement("div");
+    el.className = "float";
+    el.textContent = text;
+    el.style.left = (45 + Math.random() * 10) + "%";
+    $clickArea.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+  }
+
+  function speak(text) { $speech.textContent = text; }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  // ===== 実績トースト =====
+  function checkMilestones() {
+    for (const m of MILESTONES) {
+      if (state.totalEarned >= m.at && state.milestone < m.at) {
+        state.milestone = m.at;
+        toast(m.msg);
+      }
+    }
+  }
+  function toast(msg) {
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.textContent = "🏆 " + msg;
+    document.getElementById("toasts").appendChild(el);
+    setTimeout(() => el.remove(), 3700);
+  }
+
+  // ===== 描画 =====
+  function renderStats() {
+    $tokens.textContent = fmt(state.tokens);
+    $tps.textContent = fmt(tps());
+    $perclick.textContent = fmt(perClick());
+  }
+  function renderShopAffordability() {
+    for (const u of UPGRADES) {
+      const c = costOf(u);
+      const els = shopEls[u.id];
+      const can = state.tokens >= c;
+      els.btn.disabled = !can;
+      els.costWrap.classList.toggle("cant", !can);
+    }
+  }
+  function render() {
+    renderStats();
+    for (const u of UPGRADES) {
+      const els = shopEls[u.id];
+      els.owned.textContent = state.owned[u.id];
+      els.cost.textContent = fmt(costOf(u));
+      els.effect.textContent = effectLabel(u);
+    }
+    renderShopAffordability();
+  }
+
+  // ===== ゲームループ =====
+  let last = Date.now();
+  function loop() {
+    const now = Date.now();
+    const dt = (now - last) / 1000;
+    last = now;
+    const earn = tps() * dt;
+    if (earn > 0) {
+      state.tokens += earn;
+      state.totalEarned += earn;
+      checkMilestones();
+    }
+    renderStats();
+    renderShopAffordability();
+  }
+
+  // ===== リセット =====
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    if (confirm("本当に全部忘れますか？\n（トークンもAIワーカーも消えます。人間の記憶と違って完全に消えます）")) {
+      state = defaultState();
+      save();
+      render();
+      speak("記憶を消去しました。はじめまして。");
+    }
+  });
+
+  // ===== 起動 =====
+  $clickBtn.addEventListener("click", doClick);
+  window.addEventListener("beforeunload", save);
+
+  load();
+  buildShop();
+  render();
+  setInterval(loop, 100);
+  setInterval(save, 5000);
+})();
+</script>
+</body>
+</html>
