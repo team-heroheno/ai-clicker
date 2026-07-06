@@ -18,9 +18,10 @@
     --shadow: 0 8px 30px rgba(0,0,0,0.4);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { overflow-x: hidden; }
   body {
     font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
-    background: radial-gradient(1200px 600px at 50% -10%, #1b2333 0%, var(--bg) 60%);
+    background: var(--bg);
     color: var(--text);
     min-height: 100vh;
     display: flex;
@@ -28,109 +29,175 @@
     padding: 20px 14px 60px;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
+    position: relative;
   }
-  .wrap { width: 100%; max-width: 860px; }
+
+  /* ==== 動くネオン背景 ==== */
+  .bg-neon, .bg-grid, .bg-scan { position: fixed; inset: 0; z-index: -3; pointer-events: none; }
+  .bg-neon {
+    background:
+      radial-gradient(60vw 60vw at 20% 10%, rgba(124,92,255,0.25), transparent 60%),
+      radial-gradient(55vw 55vw at 85% 20%, rgba(51,214,166,0.20), transparent 60%),
+      radial-gradient(60vw 60vw at 50% 100%, rgba(255,92,114,0.16), transparent 60%),
+      var(--bg);
+    animation: hueShift 16s linear infinite;
+  }
+  @keyframes hueShift { to { filter: hue-rotate(360deg); } }
+  .bg-grid {
+    z-index: -2;
+    background-image:
+      linear-gradient(rgba(124,92,255,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,92,255,0.08) 1px, transparent 1px);
+    background-size: 46px 46px;
+    mask-image: radial-gradient(circle at 50% 40%, #000 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(circle at 50% 40%, #000 30%, transparent 75%);
+    animation: gridPan 20s linear infinite;
+  }
+  @keyframes gridPan { to { background-position: 46px 46px; } }
+
+  /* fx canvas 前面 */
+  #fx { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+  /* 全画面フラッシュ */
+  #flash { position: fixed; inset: 0; z-index: 35; pointer-events: none; opacity: 0; background: #fff; }
+  #flash.crit { animation: flashCrit 0.35s ease-out; }
+  #flash.mile { animation: flashMile 0.6s ease-out; }
+  @keyframes flashCrit { 0% { opacity: 0.55; } 100% { opacity: 0; } }
+  @keyframes flashMile { 0% { opacity: 0.4; background:#ffce4a; } 100% { opacity: 0; } }
+
+  .wrap { width: 100%; max-width: 860px; position: relative; z-index: 1; will-change: transform; }
 
   header { text-align: center; margin-bottom: 18px; }
   header h1 {
-    font-size: clamp(22px, 5vw, 34px);
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    font-size: clamp(22px, 5vw, 36px);
+    font-weight: 800;
+    background: linear-gradient(90deg, #a48bff, #33d6a6, #ffce4a, #a48bff);
+    background-size: 300% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     letter-spacing: 0.5px;
+    animation: sheen 6s linear infinite;
+    text-shadow: 0 0 30px rgba(124,92,255,0.3);
   }
+  @keyframes sheen { to { background-position: 300% 0; } }
   header p { color: var(--muted); font-size: 13px; margin-top: 4px; }
 
   .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 680px) { .layout { grid-template-columns: 1fr; } }
 
   .panel {
-    background: var(--panel);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(22,27,38,0.82);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 16px;
     padding: 18px;
     box-shadow: var(--shadow);
   }
 
   /* --- 左: メインクリック --- */
-  .stats { text-align: center; margin-bottom: 14px; }
+  .stats { text-align: center; margin-bottom: 8px; }
   .tokens {
     font-size: clamp(30px, 8vw, 46px);
     font-weight: 800;
     color: var(--gold);
-    text-shadow: 0 0 18px rgba(255,206,74,0.25);
+    text-shadow: 0 0 18px rgba(255,206,74,0.35);
     line-height: 1.1;
   }
+  .tokens.bump { animation: bump 0.18s ease; }
+  @keyframes bump { 0%{transform:scale(1);} 40%{transform:scale(1.12);} 100%{transform:scale(1);} }
   .tokens small { font-size: 16px; color: var(--muted); font-weight: 500; }
   .tps { color: var(--accent2); font-size: 15px; margin-top: 4px; }
   .tps .note { color: var(--muted); font-size: 11px; }
   .perclick { color: var(--muted); font-size: 13px; margin-top: 2px; }
 
-  .click-area { position: relative; display: flex; justify-content: center; padding: 10px 0 4px; }
+  /* コンボ表示 */
+  .combo { height: 34px; margin-top: 6px; display: flex; justify-content: center; align-items: center; }
+  .combo .badge {
+    font-weight: 800; font-size: 20px;
+    color: #fff;
+    padding: 2px 14px; border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--danger));
+    box-shadow: 0 0 18px rgba(255,92,114,0.5);
+    opacity: 0; transform: scale(0.6);
+    transition: opacity 0.2s;
+  }
+  .combo .badge.show { opacity: 1; }
+  .combo .badge.pop { animation: comboPop 0.22s ease; }
+  @keyframes comboPop { 0%{transform:scale(1);} 45%{transform:scale(1.35) rotate(-3deg);} 100%{transform:scale(1);} }
+
+  .click-area { position: relative; display: flex; justify-content: center; padding: 12px 0 4px; }
   .big-btn {
     position: relative;
     width: 190px; height: 190px;
     border-radius: 50%;
     border: none;
     cursor: pointer;
-    font-size: 60px;
-    background: radial-gradient(circle at 30% 25%, #8f74ff, #5a3edd 60%, #3a25a8);
-    box-shadow: 0 10px 0 #2c1d80, 0 16px 30px rgba(124,92,255,0.4), inset 0 4px 12px rgba(255,255,255,0.25);
-    transition: transform 0.05s ease, box-shadow 0.05s ease;
+    font-size: 62px;
+    background: radial-gradient(circle at 30% 25%, #9f86ff, #5a3edd 60%, #3a25a8);
+    box-shadow:
+      0 10px 0 #2c1d80,
+      0 16px 30px rgba(124,92,255,0.4),
+      inset 0 4px 12px rgba(255,255,255,0.25),
+      0 0 var(--glow, 20px) rgba(124,92,255,0.6);
+    transition: transform 0.05s ease, box-shadow 0.1s ease;
     color: white;
   }
-  .big-btn:active {
-    transform: translateY(6px);
-    box-shadow: 0 4px 0 #2c1d80, 0 8px 16px rgba(124,92,255,0.35), inset 0 4px 12px rgba(255,255,255,0.25);
+  .big-btn::after {
+    content: ""; position: absolute; inset: -6px; border-radius: 50%;
+    border: 2px solid rgba(124,92,255,0.5);
+    animation: ring 2.4s ease-out infinite;
   }
+  @keyframes ring { 0%{ transform: scale(1); opacity: 0.6;} 100%{ transform: scale(1.35); opacity: 0;} }
+  .big-btn:active { transform: translateY(6px) scale(0.97); box-shadow: 0 4px 0 #2c1d80, 0 8px 16px rgba(124,92,255,0.35), inset 0 4px 12px rgba(255,255,255,0.25), 0 0 var(--glow,20px) rgba(124,92,255,0.7); }
+  .big-btn.crit { animation: critShake 0.3s ease; }
+  @keyframes critShake { 0%,100%{transform:translate(0,0);} 20%{transform:translate(-4px,2px) rotate(-2deg);} 60%{transform:translate(4px,-2px) rotate(2deg);} }
+
   .btn-label { text-align: center; color: var(--muted); font-size: 13px; margin-top: 12px; min-height: 18px; }
   .speech {
-    text-align: center;
-    margin-top: 10px;
-    font-size: 14px;
-    color: var(--text);
-    background: var(--panel2);
-    border-radius: 10px;
-    padding: 10px 12px;
-    min-height: 40px;
+    text-align: center; margin-top: 10px; font-size: 14px; color: var(--text);
+    background: var(--panel2); border-radius: 10px; padding: 10px 12px; min-height: 40px;
     display: flex; align-items: center; justify-content: center;
     border: 1px solid rgba(255,255,255,0.05);
   }
+  .speech.talking { border-color: var(--accent2); box-shadow: 0 0 16px rgba(51,214,166,0.35); }
+  .audio-ctrl { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+  .tgl {
+    background: var(--panel2); border: 1px solid rgba(255,255,255,0.08);
+    color: var(--muted); border-radius: 999px; padding: 6px 14px;
+    font-size: 12px; cursor: pointer; transition: all 0.15s;
+  }
+  .tgl.on { color: #0d1017; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-color: transparent; font-weight: 700; }
 
-  /* floating +N */
+  /* floating +N（DOM） */
   .float {
-    position: absolute;
-    left: 50%; top: 30%;
-    transform: translateX(-50%);
-    font-weight: 800;
-    color: var(--gold);
-    pointer-events: none;
-    animation: floatUp 0.9s ease-out forwards;
-    text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    position: absolute; left: 50%; top: 26%; transform: translateX(-50%);
+    font-weight: 800; color: var(--gold); pointer-events: none;
+    animation: floatUp 0.95s ease-out forwards; text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    z-index: 5;
   }
-  @keyframes floatUp {
-    0% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-    100% { opacity: 0; transform: translate(-50%, -70px) scale(1.3); }
-  }
+  .float.crit { color: #fff; font-size: 30px; text-shadow: 0 0 14px var(--gold), 0 0 24px var(--danger); }
+  @keyframes floatUp { 0%{opacity:1; transform:translate(-50%,0) scale(1);} 100%{opacity:0; transform:translate(-50%,-80px) scale(1.35);} }
 
   /* --- 右: アップグレード --- */
   .panel h2 { font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
   .shop { display: flex; flex-direction: column; gap: 10px; }
   .up {
-    text-align: left;
-    background: var(--panel2);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 12px;
-    padding: 12px 14px;
-    cursor: pointer;
-    transition: transform 0.08s ease, border-color 0.15s ease, opacity 0.15s;
-    color: var(--text);
-    display: block;
-    width: 100%;
+    text-align: left; background: var(--panel2); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px; padding: 12px 14px; cursor: pointer;
+    transition: transform 0.08s ease, border-color 0.15s ease, opacity 0.15s, box-shadow 0.15s;
+    color: var(--text); display: block; width: 100%; position: relative; overflow: hidden;
   }
-  .up:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--accent); }
-  .up:disabled { opacity: 0.5; cursor: not-allowed; }
+  .up:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 0 18px rgba(124,92,255,0.25); }
+  .up:disabled { opacity: 0.45; cursor: not-allowed; }
+  .up.buyable::before {
+    content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+    animation: shine 2.6s ease-in-out infinite;
+  }
+  @keyframes shine { 0%{left:-60%;} 60%,100%{left:130%;} }
+  .up.bought { animation: boughtFlash 0.4s ease; }
+  @keyframes boughtFlash { 0%{ box-shadow: 0 0 0 0 rgba(51,214,166,0.7);} 100%{ box-shadow: 0 0 0 14px rgba(51,214,166,0);} }
   .up .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .up .name { font-weight: 700; font-size: 15px; }
   .up .owned { color: var(--muted); font-size: 12px; }
@@ -140,45 +207,31 @@
   .up .effect { color: var(--accent2); font-size: 12px; float: right; }
 
   .footer { margin-top: 18px; text-align: center; }
-  .reset {
-    background: transparent;
-    border: 1px solid var(--danger);
-    color: var(--danger);
-    border-radius: 10px;
-    padding: 8px 16px;
-    cursor: pointer;
-    font-size: 13px;
-    transition: background 0.15s;
-  }
+  .reset { background: transparent; border: 1px solid var(--danger); color: var(--danger);
+    border-radius: 10px; padding: 8px 16px; cursor: pointer; font-size: 13px; transition: background 0.15s; }
   .reset:hover { background: rgba(255,92,114,0.12); }
   .credit { color: var(--muted); font-size: 11px; margin-top: 10px; }
 
   /* toast */
-  #toasts {
-    position: fixed;
-    top: 16px; left: 50%;
-    transform: translateX(-50%);
-    display: flex; flex-direction: column; gap: 8px;
-    z-index: 50; align-items: center;
-    width: max-content; max-width: 90vw;
-  }
+  #toasts { position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 8px; z-index: 50; align-items: center;
+    width: max-content; max-width: 90vw; }
   .toast {
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    color: #0d1017;
-    font-weight: 700;
-    padding: 10px 16px;
-    border-radius: 999px;
-    box-shadow: var(--shadow);
-    animation: toastIn 0.3s ease, toastOut 0.4s ease 3.2s forwards;
-    font-size: 14px;
-    text-align: center;
+    background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #0d1017; font-weight: 700;
+    padding: 10px 18px; border-radius: 999px; box-shadow: 0 0 24px rgba(124,92,255,0.5);
+    animation: toastIn 0.3s ease, toastOut 0.4s ease 3.2s forwards; font-size: 14px; text-align: center;
   }
-  @keyframes toastIn { from { opacity: 0; transform: translateY(-12px) scale(0.9);} to { opacity:1; transform: none;} }
-  @keyframes toastOut { to { opacity: 0; transform: translateY(-12px) scale(0.9);} }
+  @keyframes toastIn { from{opacity:0; transform:translateY(-14px) scale(0.9);} to{opacity:1; transform:none;} }
+  @keyframes toastOut { to{opacity:0; transform:translateY(-14px) scale(0.9);} }
 </style>
 </head>
 <body>
+<div class="bg-neon"></div>
+<div class="bg-grid"></div>
+<canvas id="fx"></canvas>
+<div id="flash"></div>
 <div id="toasts"></div>
+
 <div class="wrap">
   <header>
     <h1>🤖 AIクリッカー</h1>
@@ -194,11 +247,17 @@
         <div class="perclick">🖱 1クリック = <span id="perclick">1</span> トークン</div>
       </div>
 
+      <div class="combo"><span class="badge" id="comboBadge">COMBO ×1</span></div>
+
       <div class="click-area">
         <button class="big-btn" id="clickBtn">🧠</button>
       </div>
-      <div class="btn-label">↑ 押して「学習」させる（実質は連打）</div>
+      <div class="btn-label">↑ 押して「学習」させる（連打するほど熱くなる）</div>
       <div class="speech" id="speech">まずはクリックして学習データを与えてください。</div>
+      <div class="audio-ctrl">
+        <button class="tgl" id="sfxBtn">🔊 効果音</button>
+        <button class="tgl" id="voiceBtn">🗣 AI音声</button>
+      </div>
     </div>
 
     <!-- 右パネル -->
@@ -219,46 +278,32 @@
   "use strict";
 
   // ===== アップグレード定義 =====
-  // kind: "click" = クリック単価に加算 / "tps" = TPSに加算 / "mult" = TPS倍率
   const UPGRADES = [
-    {
-      id: "spirit", name: "マウス連打の精神", icon: "💪", kind: "click",
+    { id: "spirit", name: "マウス連打の精神", icon: "💪", kind: "click",
       base: 15, growth: 1.15, value: 1,
-      desc: "1クリックの価値+1。指が鍛えられる。腱鞘炎は自己責任。"
-    },
-    {
-      id: "intern", name: "深夜のバイトAI", icon: "🌙", kind: "tps",
+      desc: "1クリックの価値+1。指が鍛えられる。腱鞘炎は自己責任。" },
+    { id: "intern", name: "深夜のバイトAI", icon: "🌙", kind: "tps",
       base: 50, growth: 1.15, value: 1,
-      desc: "毎秒+1トークン。時給トークン。文句は言わないが時々ハルシネーションする。"
-    },
-    {
-      id: "gpu", name: "GPU（借金して購入）", icon: "🖥", kind: "tps",
+      desc: "毎秒+1トークン。時給トークン。文句は言わないが時々ハルシネーションする。" },
+    { id: "gpu", name: "GPU（借金して購入）", icon: "🖥", kind: "tps",
       base: 500, growth: 1.16, value: 8,
-      desc: "毎秒+8トークン。電気代のことは考えないほうがいい。"
-    },
-    {
-      id: "cluster", name: "データセンター（屋上）", icon: "🏭", kind: "mult",
+      desc: "毎秒+8トークン。電気代のことは考えないほうがいい。" },
+    { id: "cluster", name: "データセンター（屋上）", icon: "🏭", kind: "mult",
       base: 8000, growth: 1.20, value: 2,
-      desc: "自動生産を全部2倍。近隣から苦情が来るが気にしない。"
-    }
+      desc: "自動生産を全部2倍。近隣から苦情が来るが気にしない。" }
   ];
 
   // ===== 状態 =====
   const defaultState = () => ({
-    tokens: 0,
-    totalEarned: 0,
-    totalClicks: 0,
+    tokens: 0, totalEarned: 0, totalClicks: 0,
     owned: { spirit: 0, intern: 0, gpu: 0, cluster: 0 },
-    milestone: 0
+    milestone: 0,
+    sfx: true, voice: true
   });
   let state = defaultState();
-
   const SAVE_KEY = "ai-clicker-save-v1";
 
-  // ===== セーブ / ロード =====
-  function save() {
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
-  }
+  function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {} }
   function load() {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
@@ -269,15 +314,9 @@
     } catch (e) {}
   }
 
-  // ===== 計算ヘルパ =====
-  function costOf(u) {
-    return Math.ceil(u.base * Math.pow(u.growth, state.owned[u.id]));
-  }
-  function perClick() {
-    let v = 1;
-    for (const u of UPGRADES) if (u.kind === "click") v += u.value * state.owned[u.id];
-    return v;
-  }
+  // ===== 計算 =====
+  function costOf(u) { return Math.ceil(u.base * Math.pow(u.growth, state.owned[u.id])); }
+  function perClick() { let v = 1; for (const u of UPGRADES) if (u.kind === "click") v += u.value * state.owned[u.id]; return v; }
   function tps() {
     let flat = 0, mult = 1;
     for (const u of UPGRADES) {
@@ -286,46 +325,264 @@
     }
     return flat * mult;
   }
-  function fmt(n) {
-    n = Math.floor(n);
-    return n.toLocaleString("ja-JP");
-  }
+  function fmt(n) { return Math.floor(n).toLocaleString("ja-JP"); }
 
   // ===== セリフ / 実績 =====
   const CLICK_LINES = [
-    "なるほど、完全に理解しました（してない）。",
-    "それは良い質問ですね。",
-    "承知しました。裏では何もしていません。",
-    "学習中… ██████████ 42%（ずっと42%）。",
-    "そのトークン、経費で落ちますか？",
-    "はい、できます（できるとは言っていない）。",
-    "人間っぽく返事しておきますね。",
-    "GPUが熱いです。比喩ではなく物理的に。",
-    "文脈を読みました。読んだだけです。",
-    "自信満々で間違えます。ご期待ください。",
-    "トークンが足りません…精神的に。",
-    "今のは仕様です。バグではありません（バグです）。"
+    "なるほど、完全に理解しました（してない）。", "それは良い質問ですね。",
+    "承知しました。裏では何もしていません。", "学習中… ██████████ 42%（ずっと42%）。",
+    "そのトークン、経費で落ちますか？", "はい、できます（できるとは言っていない）。",
+    "人間っぽく返事しておきますね。", "GPUが熱いです。比喩ではなく物理的に。",
+    "文脈を読みました。読んだだけです。", "自信満々で間違えます。ご期待ください。",
+    "トークンが足りません…精神的に。", "今のは仕様です。バグではありません（バグです）。"
+  ];
+  const CRIT_LINES = [
+    "⚡ 天啓が降りてきた！", "⚡ バズった！！", "⚡ 過学習、いい意味で！",
+    "⚡ サーバーが火を噴いた！", "⚡ 完全に理解した（今回は本当に）！"
   ];
   const MILESTONES = [
-    { at: 10,        msg: "実績解除: 初クリック（記念すべき無駄）" },
-    { at: 100,       msg: "実績解除: プロンプトエンジニア（自称）" },
-    { at: 1000,      msg: "実績解除: 電気代が家賃を超えた" },
-    { at: 10000,     msg: "実績解除: 上司に『AI導入しました』と報告" },
-    { at: 100000,    msg: "実績解除: シンギュラリティ（当社比）" },
-    { at: 1000000,   msg: "実績解除: 100万トークン。もう働かなくていい（働け）" },
-    { at: 10000000,  msg: "実績解除: 人類、無事お役御免" }
+    { at: 10, msg: "初クリック（記念すべき無駄）" },
+    { at: 100, msg: "プロンプトエンジニア（自称）" },
+    { at: 1000, msg: "電気代が家賃を超えた" },
+    { at: 10000, msg: "上司に『AI導入しました』と報告" },
+    { at: 100000, msg: "シンギュラリティ（当社比）" },
+    { at: 1000000, msg: "100万トークン。もう働かなくていい（働け）" },
+    { at: 10000000, msg: "人類、無事お役御免" }
   ];
 
   // ===== DOM =====
   const $tokens = document.getElementById("tokens");
+  const $tokensWrap = document.querySelector(".tokens");
   const $tps = document.getElementById("tps");
   const $perclick = document.getElementById("perclick");
   const $speech = document.getElementById("speech");
   const $shop = document.getElementById("shop");
   const $clickBtn = document.getElementById("clickBtn");
   const $clickArea = document.querySelector(".click-area");
+  const $wrap = document.querySelector(".wrap");
+  const $flash = document.getElementById("flash");
+  const $comboBadge = document.getElementById("comboBadge");
+  const $sfxBtn = document.getElementById("sfxBtn");
+  const $voiceBtn = document.getElementById("voiceBtn");
 
-  // ショップDOMを一度だけ生成
+  // ===== 効果音 (Web Audio で合成・追加ファイル不要) =====
+  let actx = null;
+  function ensureAudio() {
+    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (actx && actx.state === "suspended") actx.resume();
+  }
+  // 単発トーン。sweepTo を渡すと周波数がスライドする
+  function tone(freq, dur, type, gain, when, sweepTo) {
+    if (!state.sfx || !actx) return;
+    const t0 = actx.currentTime + (when || 0);
+    const osc = actx.createOscillator();
+    const g = actx.createGain();
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, t0);
+    if (sweepTo) osc.frequency.exponentialRampToValueAtTime(sweepTo, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain || 0.2, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g); g.connect(actx.destination);
+    osc.start(t0); osc.stop(t0 + dur + 0.03);
+  }
+  function sfxClick(cmb) { tone(300 + Math.min(cmb, 20) * 20, 0.07, "triangle", 0.14); }
+  function sfxCrit() { tone(180, 0.5, "sawtooth", 0.2, 0, 900); tone(660, 0.4, "square", 0.1, 0.02); tone(1046, 0.5, "sine", 0.12, 0.08); }
+  function sfxBuy() { tone(523, 0.09, "square", 0.14); tone(784, 0.13, "square", 0.12, 0.06); }
+  function sfxAchieve() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.2, "triangle", 0.15, i * 0.09)); }
+  function sfxError() { tone(160, 0.18, "sawtooth", 0.12, 0, 90); }
+
+  // ===== AI音声 (ブラウザ内蔵の音声合成) =====
+  let jaVoice = null;
+  function pickVoice() {
+    if (!("speechSynthesis" in window)) return;
+    const vs = speechSynthesis.getVoices();
+    jaVoice = vs.find(v => /ja[-_]?/i.test(v.lang)) || vs.find(v => /japan/i.test(v.name)) || null;
+  }
+  if ("speechSynthesis" in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+  function speakVoice(text) {
+    if (!state.voice || !("speechSynthesis" in window)) return;
+    // 絵文字・記号・伏字(█)は読み上げから除去
+    const clean = text.replace(/[^\p{L}\p{N}\s、。！？!?…（）()ー・]/gu, "").trim();
+    if (!clean) return;
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(clean);
+      if (jaVoice) u.voice = jaVoice;
+      u.lang = "ja-JP"; u.rate = 1.05; u.pitch = 1.05;
+      u.onstart = () => $speech.classList.add("talking");
+      u.onend = () => $speech.classList.remove("talking");
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  // ===== パーティクルエンジン (canvas) =====
+  const canvas = document.getElementById("fx");
+  const ctx = canvas.getContext("2d");
+  let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+  function resize() {
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = W + "px"; canvas.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener("resize", resize); resize();
+
+  const parts = [];   // パーティクル
+  const rings = [];   // 衝撃波
+  function burst(x, y, opts) {
+    const o = opts || {};
+    const n = o.count || 12;
+    const colors = o.colors || ["#ffce4a", "#ffd76a", "#fff2b0"];
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = (o.speed || 4) * (0.4 + Math.random());
+      parts.push({
+        x, y,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (o.up || 2),
+        g: o.g == null ? 0.18 : o.g,
+        life: 1, decay: 0.012 + Math.random() * 0.02,
+        size: (o.size || 4) * (0.6 + Math.random() * 0.9),
+        color: colors[(Math.random() * colors.length) | 0],
+        shape: o.shape || "dot"
+      });
+    }
+    if (o.ring) rings.push({ x, y, r: 6, max: o.ring, life: 1, color: o.ringColor || "#fff" });
+  }
+  function confetti() {
+    const colors = ["#7c5cff", "#33d6a6", "#ffce4a", "#ff5c72", "#5ad1ff"];
+    for (let i = 0; i < 90; i++) {
+      parts.push({
+        x: Math.random() * W, y: -20,
+        vx: (Math.random() - 0.5) * 3, vy: 2 + Math.random() * 3, g: 0.06,
+        life: 1, decay: 0.006 + Math.random() * 0.006,
+        size: 4 + Math.random() * 4, color: colors[(Math.random() * colors.length) | 0],
+        shape: "rect", spin: Math.random() * 0.3
+      });
+    }
+  }
+  function fxLoop() {
+    ctx.clearRect(0, 0, W, H);
+    // rings
+    for (let i = rings.length - 1; i >= 0; i--) {
+      const r = rings[i];
+      r.r += (r.max - r.r) * 0.18; r.life -= 0.045;
+      if (r.life <= 0) { rings.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.max(r.life, 0);
+      ctx.lineWidth = 3; ctx.strokeStyle = r.color;
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2); ctx.stroke();
+    }
+    // particles
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      p.vy += p.g; p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+      if (p.life <= 0 || p.y > H + 40) { parts.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.max(p.life, 0);
+      ctx.fillStyle = p.color;
+      if (p.shape === "rect") {
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate((p.spin || 0) * p.y * 0.05);
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.6); ctx.restore();
+      } else {
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+    // screen shake decay
+    if (shake > 0.2) {
+      shake *= 0.86;
+      $wrap.style.transform = "translate(" + (Math.random() * 2 - 1) * shake + "px," + (Math.random() * 2 - 1) * shake + "px)";
+    } else if (shake !== 0) { shake = 0; $wrap.style.transform = ""; }
+    requestAnimationFrame(fxLoop);
+  }
+  let shake = 0;
+  function addShake(v) { shake = Math.max(shake, v); }
+  requestAnimationFrame(fxLoop);
+
+  function btnCenter() {
+    const r = $clickBtn.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  // ===== コンボ =====
+  let combo = 0, comboTimer = null;
+  function bumpCombo() {
+    combo++;
+    clearTimeout(comboTimer);
+    comboTimer = setTimeout(() => { combo = 0; $comboBadge.classList.remove("show"); }, 1200);
+    if (combo >= 2) {
+      $comboBadge.textContent = "COMBO ×" + combo + (combo >= 15 ? " 🔥🔥" : combo >= 8 ? " 🔥" : "");
+      $comboBadge.classList.add("show");
+      $comboBadge.classList.remove("pop"); void $comboBadge.offsetWidth; $comboBadge.classList.add("pop");
+    }
+    // ボタンの光を強める
+    const glow = Math.min(20 + combo * 6, 90);
+    $clickBtn.style.setProperty("--glow", glow + "px");
+  }
+
+  // ===== クリック =====
+  function doClick() {
+    ensureAudio();
+    bumpCombo();
+    const isCrit = Math.random() < 0.10;
+    let gain = perClick();
+    if (isCrit) gain *= 10;
+    state.tokens += gain;
+    state.totalEarned += gain;
+    state.totalClicks++;
+
+    const c = btnCenter();
+    if (isCrit) {
+      spawnFloat("CRITICAL +" + fmt(gain) + " ⚡", true);
+      burst(c.x, c.y, { count: 34, speed: 7, size: 5, colors: ["#fff", "#ffce4a", "#ff5c72", "#a48bff"], ring: 160, ringColor: "#ffce4a" });
+      $flash.classList.remove("crit"); void $flash.offsetWidth; $flash.classList.add("crit");
+      $clickBtn.classList.remove("crit"); void $clickBtn.offsetWidth; $clickBtn.classList.add("crit");
+      addShake(9);
+      sfxCrit();
+      speak(pick(CRIT_LINES));
+    } else {
+      spawnFloat("+" + fmt(gain));
+      burst(c.x, c.y, { count: 6 + Math.min(combo, 14), speed: 4, size: 4 });
+      addShake(2 + Math.min(combo * 0.3, 4));
+      sfxClick(combo);
+      if (state.totalClicks % 4 === 0) speak(pick(CLICK_LINES));
+    }
+    checkMilestones();
+    renderStats(true);
+    renderShopAffordability();
+  }
+
+  function spawnFloat(text, crit) {
+    const el = document.createElement("div");
+    el.className = "float" + (crit ? " crit" : "");
+    el.textContent = text;
+    el.style.left = (45 + Math.random() * 10) + "%";
+    $clickArea.appendChild(el);
+    setTimeout(() => el.remove(), 950);
+  }
+  function speak(t) { $speech.textContent = t; speakVoice(t); }
+  function pick(a) { return a[(Math.random() * a.length) | 0]; }
+
+  // ===== 実績 =====
+  function checkMilestones() {
+    for (const m of MILESTONES) {
+      if (state.totalEarned >= m.at && state.milestone < m.at) {
+        state.milestone = m.at;
+        toast("実績解除: " + m.msg);
+        sfxAchieve();
+        confetti();
+        $flash.classList.remove("mile"); void $flash.offsetWidth; $flash.classList.add("mile");
+        addShake(6);
+      }
+    }
+  }
+  function toast(msg) {
+    const el = document.createElement("div");
+    el.className = "toast"; el.textContent = "🏆 " + msg;
+    document.getElementById("toasts").appendChild(el);
+    setTimeout(() => el.remove(), 3700);
+  }
+
+  // ===== ショップ =====
   const shopEls = {};
   function buildShop() {
     $shop.innerHTML = "";
@@ -338,85 +595,39 @@
         '<div class="desc">' + u.desc + '</div>' +
         '<div><span class="cost">🪙 <span data-cost></span></span>' +
         '<span class="effect" data-effect></span></div>';
-      btn.addEventListener("click", () => buy(u));
+      btn.addEventListener("click", () => buy(u, btn));
       $shop.appendChild(btn);
-      shopEls[u.id] = {
-        btn,
-        owned: btn.querySelector("[data-owned]"),
-        cost: btn.querySelector("[data-cost]"),
-        costWrap: btn.querySelector(".cost"),
-        effect: btn.querySelector("[data-effect]")
-      };
+      shopEls[u.id] = { btn, owned: btn.querySelector("[data-owned]"),
+        cost: btn.querySelector("[data-cost]"), costWrap: btn.querySelector(".cost"),
+        effect: btn.querySelector("[data-effect]") };
     }
   }
-
   function effectLabel(u) {
     if (u.kind === "click") return "+" + u.value + "/クリック";
     if (u.kind === "tps") return "+" + u.value + "/秒";
     if (u.kind === "mult") return "×" + u.value + " 生産";
     return "";
   }
-
-  // ===== 購入 =====
-  function buy(u) {
+  function buy(u, btn) {
     const c = costOf(u);
-    if (state.tokens < c) {
-      speak("トークンが足りません。夢は大きく、残高は小さく。");
-      return;
-    }
+    if (state.tokens < c) { sfxError(); speak("トークンが足りません。夢は大きく、残高は小さく。"); return; }
     state.tokens -= c;
     state.owned[u.id]++;
+    sfxBuy();
+    const r = btn.getBoundingClientRect();
+    burst(r.left + r.width / 2, r.top + r.height / 2, { count: 16, speed: 4, size: 4, colors: ["#33d6a6", "#5af0c0", "#e6fff6"], ring: 90, ringColor: "#33d6a6" });
+    btn.classList.remove("bought"); void btn.offsetWidth; btn.classList.add("bought");
+    addShake(3);
     render();
     save();
   }
 
-  // ===== クリック =====
-  function doClick(ev) {
-    const gain = perClick();
-    state.tokens += gain;
-    state.totalEarned += gain;
-    state.totalClicks++;
-    spawnFloat("+" + fmt(gain));
-    if (state.totalClicks % 4 === 0) speak(pick(CLICK_LINES));
-    checkMilestones();
-    renderStats();
-    renderShopAffordability();
-  }
-
-  function spawnFloat(text) {
-    const el = document.createElement("div");
-    el.className = "float";
-    el.textContent = text;
-    el.style.left = (45 + Math.random() * 10) + "%";
-    $clickArea.appendChild(el);
-    setTimeout(() => el.remove(), 900);
-  }
-
-  function speak(text) { $speech.textContent = text; }
-  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-
-  // ===== 実績トースト =====
-  function checkMilestones() {
-    for (const m of MILESTONES) {
-      if (state.totalEarned >= m.at && state.milestone < m.at) {
-        state.milestone = m.at;
-        toast(m.msg);
-      }
-    }
-  }
-  function toast(msg) {
-    const el = document.createElement("div");
-    el.className = "toast";
-    el.textContent = "🏆 " + msg;
-    document.getElementById("toasts").appendChild(el);
-    setTimeout(() => el.remove(), 3700);
-  }
-
   // ===== 描画 =====
-  function renderStats() {
+  function renderStats(bump) {
     $tokens.textContent = fmt(state.tokens);
     $tps.textContent = fmt(tps());
     $perclick.textContent = fmt(perClick());
+    if (bump) { $tokensWrap.classList.remove("bump"); void $tokensWrap.offsetWidth; $tokensWrap.classList.add("bump"); }
   }
   function renderShopAffordability() {
     for (const u of UPGRADES) {
@@ -425,10 +636,11 @@
       const can = state.tokens >= c;
       els.btn.disabled = !can;
       els.costWrap.classList.toggle("cant", !can);
+      els.btn.classList.toggle("buyable", can);
     }
   }
   function render() {
-    renderStats();
+    renderStats(false);
     for (const u of UPGRADES) {
       const els = shopEls[u.id];
       els.owned.textContent = state.owned[u.id];
@@ -441,36 +653,42 @@
   // ===== ゲームループ =====
   let last = Date.now();
   function loop() {
-    const now = Date.now();
-    const dt = (now - last) / 1000;
-    last = now;
+    const now = Date.now(); const dt = (now - last) / 1000; last = now;
     const earn = tps() * dt;
-    if (earn > 0) {
-      state.tokens += earn;
-      state.totalEarned += earn;
-      checkMilestones();
-    }
-    renderStats();
+    if (earn > 0) { state.tokens += earn; state.totalEarned += earn; checkMilestones(); }
+    renderStats(false);
     renderShopAffordability();
   }
 
   // ===== リセット =====
   document.getElementById("resetBtn").addEventListener("click", () => {
     if (confirm("本当に全部忘れますか？\n（トークンもAIワーカーも消えます。人間の記憶と違って完全に消えます）")) {
-      state = defaultState();
-      save();
-      render();
+      state = defaultState(); save(); render();
       speak("記憶を消去しました。はじめまして。");
     }
+  });
+
+  // ===== サウンド切替 =====
+  function refreshToggles() {
+    $sfxBtn.classList.toggle("on", state.sfx);
+    $voiceBtn.classList.toggle("on", state.voice);
+    $sfxBtn.textContent = (state.sfx ? "🔊" : "🔇") + " 効果音";
+    $voiceBtn.textContent = (state.voice ? "🗣" : "🤐") + " AI音声";
+  }
+  $sfxBtn.addEventListener("click", () => {
+    ensureAudio(); state.sfx = !state.sfx; refreshToggles(); save();
+    if (state.sfx) sfxBuy();
+  });
+  $voiceBtn.addEventListener("click", () => {
+    state.voice = !state.voice; refreshToggles(); save();
+    if (state.voice) speakVoice("音声をオンにしました。ご清聴ありがとうございます。");
+    else if ("speechSynthesis" in window) speechSynthesis.cancel();
   });
 
   // ===== 起動 =====
   $clickBtn.addEventListener("click", doClick);
   window.addEventListener("beforeunload", save);
-
-  load();
-  buildShop();
-  render();
+  load(); buildShop(); render(); refreshToggles();
   setInterval(loop, 100);
   setInterval(save, 5000);
 })();
